@@ -9,6 +9,29 @@ const DIFFICULTIES = ['easy', 'medium', 'hard'];
 const MAX_ENTRIES = 10;
 const MAX_SCORE = 100000;
 
+// Scores from before the site went online (played from the local file).
+// Used only while a difficulty has nothing saved yet. The first new score
+// on that difficulty saves these together with it, after which this is ignored.
+const seed = (name, score) => ({ name, score, level: 1, won: false, date: '2026-11-21' });
+const STARTING_SCORES = {
+  easy: [
+    seed('daddy', 945),
+    seed('alfie', 896),
+    seed('theo', 852),
+    seed('alfie', 805),
+    seed('theo', 803),
+    seed('aaaallllffff', 789),
+    seed('theo', 788),
+    seed('theo', 784),
+    seed('theo', 777),
+    seed('alfie', 757),
+  ],
+  medium: [],
+  hard: [],
+};
+const loadEntries = async (store, difficulty) =>
+  (await store.get(difficulty, { type: 'json' })) ?? STARTING_SCORES[difficulty].map((e) => ({ ...e }));
+
 // Keep these name rules in step with public/game.js.
 const BLOCK_PARTS = ['fuck', 'shit', 'cunt', 'bitch', 'nigg', 'fagg', 'slut', 'whore', 'wank',
   'twat', 'porn', 'cock', 'penis', 'nazi', 'hitler', 'dildo'];
@@ -37,7 +60,7 @@ export default async (req) => {
   if (req.method === 'GET') {
     const difficulty = new URL(req.url).searchParams.get('difficulty');
     if (!DIFFICULTIES.includes(difficulty)) return json({ error: 'Unknown difficulty.' }, 400);
-    const entries = (await store.get(difficulty, { type: 'json' })) ?? [];
+    const entries = await loadEntries(store, difficulty);
     return json({ entries });
   }
 
@@ -63,7 +86,7 @@ export default async (req) => {
       date: new Date().toISOString().slice(0, 10),
     };
 
-    const entries = (await store.get(difficulty, { type: 'json' })) ?? [];
+    const entries = await loadEntries(store, difficulty);
     entries.push(entry);
     entries.sort((a, b) => b.score - a.score); // stable: earlier scores win ties
     const top = entries.slice(0, MAX_ENTRIES);
